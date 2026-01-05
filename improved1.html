@@ -1,0 +1,828 @@
+<!DOCTYPE html>
+<html lang="sq">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MRentals - Menaxhimi Financiar</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- FontAwesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- jsPDF & AutoTable -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"></script>
+
+    <!-- Google Fonts -->
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+        }
+
+        /* Animations */
+        .fade-in {
+            animation: fadeIn 0.4s ease-in-out;
+        }
+
+        .slide-up {
+            animation: slideUp 0.4s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Custom Scrollbar for tables */
+        .custom-scroll::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        .custom-scroll::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+
+        .custom-scroll::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+
+        .custom-scroll::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        /* Toast Notification Styles */
+        #toast-container {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 50;
+        }
+
+        .toast {
+            background: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            display: flex;
+            align-items: center;
+            margin-top: 10px;
+            animation: slideInRight 0.3s ease-out forwards;
+            border-left: 4px solid;
+        }
+
+        @keyframes slideInRight {
+            from {
+                opacity: 0;
+                transform: translateX(100%);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+    </style>
+</head>
+
+<body class="text-gray-800 h-screen flex flex-col">
+
+    <!-- TOAST CONTAINER -->
+    <div id="toast-container"></div>
+
+    <!-- 1. LOGIN / LANDING VIEW -->
+    <div id="loginView"
+        class="hidden flex-1 flex flex-col items-center justify-center bg-gradient-to-br from-blue-900 via-blue-800 to-slate-900 text-white p-4">
+        <div
+            class="text-center slide-up max-w-md w-full bg-white/10 backdrop-blur-lg p-8 rounded-2xl border border-white/20 shadow-2xl">
+            <div class="bg-blue-600 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
+                <i class="fa-solid fa-car-side text-3xl text-white"></i>
+            </div>
+            <h1 class="text-3xl font-bold mb-2">MRentals Manager</h1>
+            <p class="text-blue-100 mb-8">Sistemi i menaxhimit të raporteve financiare për flotën tuaj.</p>
+
+            <button onclick="window.googleLogin()"
+                class="w-full bg-white text-blue-900 hover:bg-blue-50 font-bold py-3 px-6 rounded-xl transition duration-300 flex items-center justify-center gap-3 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
+                <i class="fa-brands fa-google text-xl"></i>
+                Hyni me Google
+            </button>
+            <p class="mt-6 text-xs text-blue-300">Të dhënat ruhen të sigurta në Cloud</p>
+        </div>
+    </div>
+
+    <!-- 2. DASHBOARD VIEW -->
+    <div id="dashboardView" class="hidden flex-col h-full overflow-y-auto">
+
+        <!-- Navbar -->
+        <nav class="bg-white border-b border-gray-200 sticky top-0 z-30 shadow-sm">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between h-16">
+                    <div class="flex items-center gap-3">
+                        <div class="bg-blue-600 text-white p-2 rounded-lg">
+                            <i class="fa-solid fa-car-side text-lg"></i>
+                        </div>
+                        <div>
+                            <span class="font-bold text-xl text-gray-800 block leading-tight">MRentals</span>
+                            <span id="saveStatus" class="text-xs font-semibold text-green-500 flex items-center gap-1">
+                                <i class="fa-solid fa-circle text-[8px]"></i> Online
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-4">
+                        <div class="hidden md:flex flex-col items-end mr-2">
+                            <span id="userName" class="text-sm font-semibold text-gray-700">User</span>
+                            <span class="text-xs text-gray-500">Admin</span>
+                        </div>
+                        <button onclick="window.googleLogout()"
+                            class="bg-gray-100 hover:bg-red-50 text-gray-600 hover:text-red-600 p-2 rounded-lg transition"
+                            title="Dil">
+                            <i class="fa-solid fa-right-from-bracket"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
+
+            <!-- Global Filters & Stats -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                <!-- Date Filter -->
+                <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-center">
+                    <label for="reportDate" class="text-xs font-bold text-gray-400 uppercase mb-1">Periudha e
+                        Raportit</label>
+                    <input type="text" id="reportDate" placeholder="YYYY-MM"
+                        title="Futni periudhën në formatin YYYY-MM (p.sh. 2026-01)" onchange="window.triggerSave()"
+                        class="w-full text-lg font-semibold text-gray-700 bg-transparent border-b border-gray-300 focus:border-blue-500 outline-none transition py-1"
+                        pattern="\d{4}-\d{2}">
+                </div>
+
+                <!-- Stats Cards -->
+                <div class="bg-white p-5 rounded-xl shadow-sm border border-l-4 border-l-green-500 border-gray-100">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-xs font-bold text-gray-400 uppercase">Të Ardhurat</p>
+                            <h3 class="text-2xl font-bold text-gray-800 mt-1" id="statIncome">0.00 €</h3>
+                        </div>
+                        <div class="bg-green-100 text-green-600 p-2 rounded-lg"><i
+                                class="fa-solid fa-arrow-trend-up"></i></div>
+                    </div>
+                </div>
+
+                <div class="bg-white p-5 rounded-xl shadow-sm border border-l-4 border-l-red-500 border-gray-100">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-xs font-bold text-gray-400 uppercase">Shpenzimet</p>
+                            <h3 class="text-2xl font-bold text-gray-800 mt-1" id="statExpense">0.00 €</h3>
+                        </div>
+                        <div class="bg-red-100 text-red-600 p-2 rounded-lg"><i class="fa-solid fa-arrow-trend-down"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white p-5 rounded-xl shadow-sm border border-l-4 border-l-blue-500 border-gray-100">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-xs font-bold text-gray-400 uppercase">Bilanci Neto</p>
+                            <h3 class="text-2xl font-bold text-gray-800 mt-1" id="statNet">0.00 €</h3>
+                        </div>
+                        <div class="bg-blue-100 text-blue-600 p-2 rounded-lg"><i class="fa-solid fa-wallet"></i></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+
+                <!-- LEFT COLUMN: INPUTS & TABLES (Span 2) -->
+                <div class="lg:col-span-2 space-y-8">
+
+                    <!-- INCOME SECTION -->
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                        <div class="bg-gray-50 px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+                            <h3 class="font-bold text-gray-800 flex items-center gap-2">
+                                <span class="w-2 h-2 rounded-full bg-green-500"></span> Të Ardhurat
+                            </h3>
+                        </div>
+
+                        <div class="p-6">
+                            <!-- Income Form -->
+                            <div
+                                class="grid grid-cols-1 sm:grid-cols-12 gap-3 mb-6 bg-green-50/50 p-4 rounded-xl border border-green-100">
+                                <div class="sm:col-span-3">
+                                    <input type="date" id="incDate" title="Data e të ardhurave"
+                                        class="w-full p-2.5 text-sm border-gray-300 rounded-lg border focus:ring-green-500 focus:border-green-500"
+                                        required>
+                                </div>
+                                <div class="sm:col-span-3">
+                                    <input type="text" id="incCar" placeholder="Makina (psh. Audi A4)"
+                                        title="Emri i makinës"
+                                        class="w-full p-2.5 text-sm border-gray-300 rounded-lg border focus:ring-green-500 focus:border-green-500">
+                                </div>
+                                <div class="sm:col-span-2">
+                                    <input type="text" id="incPeriod" placeholder="Ditë" title="Numri i ditëve"
+                                        class="w-full p-2.5 text-sm border-gray-300 rounded-lg border focus:ring-green-500 focus:border-green-500">
+                                </div>
+                                <div class="sm:col-span-2">
+                                    <input type="number" id="incAmount" placeholder="€ Shuma" title="Shuma në euro"
+                                        class="w-full p-2.5 text-sm border-gray-300 rounded-lg border focus:ring-green-500 focus:border-green-500">
+                                </div>
+                                <div class="sm:col-span-2">
+                                    <button onclick="window.addIncome()"
+                                        class="w-full bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg text-sm px-4 py-2.5 transition flex items-center justify-center gap-1">
+                                        <i class="fa-solid fa-plus"></i> Shto
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Income Table -->
+                            <div class="overflow-x-auto custom-scroll max-h-[300px]">
+                                <table class="w-full text-sm text-left text-gray-500">
+                                    <thead class="text-xs text-gray-700 uppercase bg-gray-50 sticky top-0">
+                                        <tr>
+                                            <th class="px-4 py-3">Data</th>
+                                            <th class="px-4 py-3">Makina</th>
+                                            <th class="px-4 py-3 text-center">Ditë</th>
+                                            <th class="px-4 py-3 text-right">Shuma</th>
+                                            <th class="px-4 py-3 text-center">Veprim</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="incomeTableBody" class="divide-y divide-gray-100">
+                                        <!-- Rows rendered by JS -->
+                                    </tbody>
+                                </table>
+                                <div id="emptyIncome" class="hidden text-center py-8 text-gray-400 text-sm">
+                                    Nuk ka të dhëna të regjistruara.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- EXPENSES SECTION -->
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                        <div class="bg-gray-50 px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+                            <h3 class="font-bold text-gray-800 flex items-center gap-2">
+                                <span class="w-2 h-2 rounded-full bg-red-500"></span> Shpenzimet
+                            </h3>
+                        </div>
+
+                        <div class="p-6">
+                            <!-- Expense Form -->
+                            <div
+                                class="grid grid-cols-1 sm:grid-cols-12 gap-3 mb-6 bg-red-50/50 p-4 rounded-xl border border-red-100">
+                                <div class="sm:col-span-3">
+                                    <input type="date" id="expDate" title="Data e shpenzimit"
+                                        class="w-full p-2.5 text-sm border-gray-300 rounded-lg border focus:ring-red-500 focus:border-red-500">
+                                </div>
+                                <div class="sm:col-span-3">
+                                    <select id="expCategory" title="Kategoria e shpenzimit"
+                                        class="w-full p-2.5 text-sm border-gray-300 rounded-lg border focus:ring-red-500 focus:border-red-500 bg-white">
+                                        <option value="Servis">Servis & Mirëmbajtje</option>
+                                        <option value="Karburant">Karburant</option>
+                                        <option value="Larje">Larje / Pastrim</option>
+                                        <option value="Pjesë">Pjesë Këmbimi</option>
+                                        <option value="Siguracion">Siguracion / Taksat</option>
+                                        <option value="Tjetër">Tjetër</option>
+                                    </select>
+                                </div>
+                                <div class="sm:col-span-4">
+                                    <input type="text" id="expDesc" placeholder="Përshkrimi i detajuar"
+                                        title="Përshkrimi i detajuar i shpenzimit"
+                                        class="w-full p-2.5 text-sm border-gray-300 rounded-lg border focus:ring-red-500 focus:border-red-500">
+                                </div>
+                                <div class="sm:col-span-2 hidden sm:block">
+                                    <!-- Spacer for row alignment if needed -->
+                                </div>
+
+                                <!-- Row 2 -->
+                                <div class="sm:col-span-3">
+                                    <input type="text" id="expCar" placeholder="Makina" title="Emri i makinës"
+                                        class="w-full p-2.5 text-sm border-gray-300 rounded-lg border focus:ring-red-500 focus:border-red-500">
+                                </div>
+                                <div class="sm:col-span-3">
+                                    <input type="number" id="expAmount" placeholder="€ Shuma"
+                                        title="Shuma e shpenzimit në euro"
+                                        class="w-full p-2.5 text-sm border-gray-300 rounded-lg border focus:ring-red-500 focus:border-red-500">
+                                </div>
+                                <div class="sm:col-span-6">
+                                    <button onclick="window.addExpense()"
+                                        class="w-full bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg text-sm px-4 py-2.5 transition flex items-center justify-center gap-1">
+                                        <i class="fa-solid fa-plus"></i> Shto Shpenzim
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Expense Table -->
+                            <div class="overflow-x-auto custom-scroll max-h-[300px]">
+                                <table class="w-full text-sm text-left text-gray-500">
+                                    <thead class="text-xs text-gray-700 uppercase bg-gray-50 sticky top-0">
+                                        <tr>
+                                            <th class="px-4 py-3">Data</th>
+                                            <th class="px-4 py-3">Kategoria</th>
+                                            <th class="px-4 py-3">Makina</th>
+                                            <th class="px-4 py-3 text-right">Shuma</th>
+                                            <th class="px-4 py-3 text-center">Veprim</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="expenseTableBody" class="divide-y divide-gray-100">
+                                        <!-- Rows -->
+                                    </tbody>
+                                </table>
+                                <div id="emptyExpense" class="hidden text-center py-8 text-gray-400 text-sm">
+                                    Nuk ka shpenzime të regjistruara.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- RIGHT COLUMN: CHART & ACTIONS (Span 1) -->
+                <div class="space-y-8">
+
+                    <!-- Chart Card -->
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                        <h4 class="font-bold text-gray-700 mb-4 text-center">Pasqyra Financiare</h4>
+                        <div class="relative h-64 w-full">
+                            <canvas id="financeChart"></canvas>
+                        </div>
+                        <div class="mt-4 text-center">
+                            <p class="text-xs text-gray-400">Vizualizimi i të ardhurave kundrejt shpenzimeve.</p>
+                        </div>
+                    </div>
+
+                    <!-- Actions Card -->
+                    <div class="bg-gradient-to-br from-blue-900 to-blue-800 rounded-xl shadow-lg p-6 text-white">
+                        <h4 class="font-bold text-lg mb-2">Raportimi</h4>
+                        <p class="text-blue-200 text-sm mb-6">Gjeneroni raportin zyrtar në PDF për periudhën e zgjedhur.
+                        </p>
+
+                        <button onclick="window.generatePDF()"
+                            class="w-full bg-white text-blue-900 hover:bg-blue-50 font-bold py-3 px-4 rounded-lg shadow-md transition transform hover:scale-[1.02] flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-file-pdf text-red-500"></i> Shkarko PDF
+                        </button>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <footer class="mt-12 border-t pt-6 text-center text-gray-400 text-sm pb-8">
+                <p>&copy; 2026 MRentals Management System.</p>
+            </footer>
+
+        </main>
+    </div>
+
+    <!-- LOGIC -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-app.js";
+        import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-auth.js";
+        import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-firestore.js";
+
+        // CONFIGURATION
+        const firebaseConfig = {
+            apiKey: "AIzaSyB8VZ45G19883iN3C4T57qydNJulXHY4bg",
+            authDomain: "monthlystatementmrentals.firebaseapp.com",
+            projectId: "monthlystatementmrentals",
+            storageBucket: "monthlystatementmrentals.firebasestorage.app",
+            messagingSenderId: "449076032288",
+            appId: "1:449076032288:web:b5300835c6dd2063b55d45"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const provider = new GoogleAuthProvider();
+
+        // State
+        let incomes = [];
+        let expenses = [];
+        let currentUser = null;
+        let financeChart = null;
+
+        // --- AUTH LOGIC ---
+        onAuthStateChanged(auth, (user) => {
+            currentUser = user;
+            const loginView = document.getElementById('loginView');
+            const dashboardView = document.getElementById('dashboardView');
+            const userName = document.getElementById('userName');
+
+            if (user) {
+                // Show Dashboard
+                loginView.classList.add('hidden');
+                dashboardView.classList.remove('hidden');
+                dashboardView.classList.add('flex');
+                userName.innerText = user.displayName || "Admin";
+
+                showToast(`Mirësevini, ${user.displayName.split(' ')[0]}`, 'success');
+                loadFromCloud();
+            } else {
+                // Show Login
+                loginView.classList.remove('hidden');
+                dashboardView.classList.add('hidden');
+                dashboardView.classList.remove('flex');
+                incomes = [];
+                expenses = [];
+            }
+        });
+
+        window.googleLogin = async function () {
+            try {
+                await signInWithPopup(auth, provider);
+            } catch (error) {
+                showToast("Gabim gjatë hyrjes: " + error.message, 'error');
+            }
+        };
+
+        window.googleLogout = async function () {
+            if (confirm("Dëshironi të dilni nga sistemi?")) {
+                await signOut(auth);
+            }
+        };
+
+        // --- FIRESTORE LOGIC ---
+        function getUserDocRef() {
+            if (!currentUser) return null;
+            return doc(db, "users", currentUser.uid, "mrentals_data", "main_report");
+        }
+
+        function loadFromCloud() {
+            const docRef = getUserDocRef();
+            if (!docRef) return;
+            updateSaveStatus("Duke sinkronizuar...", "text-yellow-500");
+
+            onSnapshot(docRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    incomes = data.incomes || [];
+                    expenses = data.expenses || [];
+                    if (data.reportDate) document.getElementById('reportDate').value = data.reportDate;
+
+                    renderTables();
+                    updateSaveStatus("Të dhënat u përditësuan", "text-green-500");
+                } else {
+                    // Initialize empty doc
+                    updateSaveStatus("Gati për regjistrim", "text-blue-500");
+                    // Set default date to current month
+                    const now = new Date();
+                    const monthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+                    document.getElementById('reportDate').value = monthStr;
+                }
+            }, (err) => {
+                showToast("Gabim rrjeti: " + err.message, 'error');
+                updateSaveStatus("Offline", "text-red-500");
+            });
+        }
+
+        window.triggerSave = async function () {
+            if (!currentUser) return;
+            const docRef = getUserDocRef();
+            updateSaveStatus("Duke ruajtur...", "text-yellow-500");
+
+            const dataToSave = {
+                incomes,
+                expenses,
+                reportDate: document.getElementById('reportDate').value,
+                lastUpdated: new Date().toISOString()
+            };
+
+            try {
+                await setDoc(docRef, dataToSave);
+                setTimeout(() => updateSaveStatus("Online", "text-green-500"), 1500);
+            } catch (e) {
+                console.error(e);
+                showToast("Dështoi ruajtja!", 'error');
+                updateSaveStatus("Gabim Ruajtjeje", "text-red-500");
+            }
+        };
+
+        function updateSaveStatus(msg, colorClass) {
+            const el = document.getElementById('saveStatus');
+            el.className = `text-xs font-semibold flex items-center gap-1 ${colorClass}`;
+            el.innerHTML = `<i class="fa-solid fa-circle text-[8px]"></i> ${msg}`;
+        }
+
+        // --- APP LOGIC ---
+
+        // Helper: Init Date Inputs to Today
+        function initDates() {
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('incDate').value = today;
+            document.getElementById('expDate').value = today;
+        }
+        initDates();
+
+        window.addIncome = function () {
+            const date = document.getElementById('incDate').value;
+            const car = document.getElementById('incCar').value;
+            const period = document.getElementById('incPeriod').value;
+            const amount = parseFloat(document.getElementById('incAmount').value);
+
+            if (!date || !car || isNaN(amount)) {
+                showToast("Ju lutem plotësoni fushat e detyrueshme!", 'error');
+                return;
+            }
+
+            incomes.push({ date, car, period, amount });
+
+            // Clear specific fields
+            document.getElementById('incCar').value = '';
+            document.getElementById('incPeriod').value = '';
+            document.getElementById('incAmount').value = '';
+
+            renderTables();
+            window.triggerSave();
+            showToast("U shtua me sukses!", 'success');
+        };
+
+        window.addExpense = function () {
+            const date = document.getElementById('expDate').value;
+            const category = document.getElementById('expCategory').value;
+            const desc = document.getElementById('expDesc').value;
+            const car = document.getElementById('expCar').value;
+            const amount = parseFloat(document.getElementById('expAmount').value);
+
+            if (!date || !category || isNaN(amount)) {
+                showToast("Ju lutem plotësoni fushat e detyrueshme!", 'error');
+                return;
+            }
+
+            expenses.push({ date, category, desc, car, amount });
+
+            document.getElementById('expDesc').value = '';
+            document.getElementById('expCar').value = '';
+            document.getElementById('expAmount').value = '';
+
+            renderTables();
+            window.triggerSave();
+            showToast("Shpenzimi u shtua!", 'success');
+        };
+
+        window.removeItem = function (type, index) {
+            if (type === 'income') incomes.splice(index, 1);
+            else expenses.splice(index, 1);
+
+            renderTables();
+            window.triggerSave();
+            showToast("Rreshti u fshi.", 'neutral');
+        }
+
+        function renderTables() {
+            // Income Render
+            const incBody = document.getElementById('incomeTableBody');
+            const emptyInc = document.getElementById('emptyIncome');
+
+            incBody.innerHTML = '';
+            if (incomes.length === 0) emptyInc.classList.remove('hidden');
+            else {
+                emptyInc.classList.add('hidden');
+                incomes.forEach((inc, idx) => {
+                    const row = `
+                        <tr class="bg-white hover:bg-gray-50 border-b border-gray-100 fade-in">
+                            <td class="px-4 py-3 font-medium text-gray-900">${inc.date}</td>
+                            <td class="px-4 py-3">${inc.car}</td>
+                            <td class="px-4 py-3 text-center">${inc.period || '-'}</td>
+                            <td class="px-4 py-3 text-right font-bold text-green-600">+${inc.amount.toFixed(2)} €</td>
+                            <td class="px-4 py-3 text-center">
+                                <button onclick="window.removeItem('income', ${idx})" class="text-gray-400 hover:text-red-500 transition"><i class="fa-solid fa-trash-can"></i></button>
+                            </td>
+                        </tr>
+                    `;
+                    incBody.innerHTML += row;
+                });
+            }
+
+            // Expense Render
+            const expBody = document.getElementById('expenseTableBody');
+            const emptyExp = document.getElementById('emptyExpense');
+
+            expBody.innerHTML = '';
+            if (expenses.length === 0) emptyExp.classList.remove('hidden');
+            else {
+                emptyExp.classList.add('hidden');
+                expenses.forEach((exp, idx) => {
+                    const row = `
+                        <tr class="bg-white hover:bg-gray-50 border-b border-gray-100 fade-in">
+                            <td class="px-4 py-3 font-medium text-gray-900">${exp.date}</td>
+                            <td class="px-4 py-3"><span class="bg-gray-100 text-gray-800 text-xs font-medium px-2 py-0.5 rounded border border-gray-200">${exp.category}</span></td>
+                            <td class="px-4 py-3">${exp.car || '-'}</td>
+                            <td class="px-4 py-3 text-right font-bold text-red-500">-${exp.amount.toFixed(2)} €</td>
+                            <td class="px-4 py-3 text-center">
+                                <button onclick="window.removeItem('expense', ${idx})" class="text-gray-400 hover:text-red-500 transition"><i class="fa-solid fa-trash-can"></i></button>
+                            </td>
+                        </tr>
+                    `;
+                    expBody.innerHTML += row;
+                });
+            }
+
+            updateStats();
+            updateChart();
+        }
+
+        function updateStats() {
+            const totalInc = incomes.reduce((sum, i) => sum + (i.amount || 0), 0);
+            const totalExp = expenses.reduce((sum, i) => sum + (i.amount || 0), 0);
+            const net = totalInc - totalExp;
+
+            document.getElementById('statIncome').innerText = totalInc.toFixed(2) + ' €';
+            document.getElementById('statExpense').innerText = totalExp.toFixed(2) + ' €';
+
+            const netEl = document.getElementById('statNet');
+            netEl.innerText = net.toFixed(2) + ' €';
+            netEl.className = `text-2xl font-bold mt-1 ${net >= 0 ? 'text-blue-600' : 'text-red-600'}`;
+        }
+
+        // --- CHART JS ---
+        function updateChart() {
+            const ctx = document.getElementById('financeChart').getContext('2d');
+            const totalInc = incomes.reduce((sum, i) => sum + (i.amount || 0), 0);
+            const totalExp = expenses.reduce((sum, i) => sum + (i.amount || 0), 0);
+
+            if (financeChart) financeChart.destroy();
+
+            // Handle empty state for chart
+            if (totalInc === 0 && totalExp === 0) {
+                // Could draw a placeholder, but we'll leave it blank for now
+                return;
+            }
+
+            financeChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Të Ardhurat', 'Shpenzimet'],
+                    datasets: [{
+                        data: [totalInc, totalExp],
+                        backgroundColor: ['#16a34a', '#dc2626'], // Green-600, Red-600
+                        borderWidth: 0,
+                        hoverOffset: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom' }
+                    }
+                }
+            });
+        }
+
+        // --- TOAST NOTIFICATIONS ---
+        function showToast(message, type = 'neutral') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+
+            let colorClass = 'border-gray-500 text-gray-700';
+            let icon = '<i class="fa-solid fa-info-circle mr-2 text-gray-500"></i>';
+
+            if (type === 'success') {
+                colorClass = 'border-green-500 text-gray-700';
+                icon = '<i class="fa-solid fa-check-circle mr-2 text-green-500"></i>';
+            } else if (type === 'error') {
+                colorClass = 'border-red-500 text-gray-700';
+                icon = '<i class="fa-solid fa-exclamation-circle mr-2 text-red-500"></i>';
+            }
+
+            toast.className = `toast ${colorClass}`;
+            toast.innerHTML = `${icon} <span class="font-medium text-sm">${message}</span>`;
+
+            container.appendChild(toast);
+
+            // Remove after 3 seconds
+            setTimeout(() => {
+                toast.style.animation = 'slideInRight 0.3s reverse forwards';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        // --- PDF GENERATION (Original Version) ---
+        window.generatePDF = function () {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            const monthYear = document.getElementById('reportDate').value;
+
+            // Title
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(22);
+            doc.text("MRentals", 105, 20, null, null, "center");
+            doc.setFontSize(14);
+            doc.text("Raport Mujor – Menaxhim i të Ardhurave dhe Shpenzimeve", 105, 30, null, null, "center");
+
+            // Meta Data
+            doc.setFontSize(10);
+            doc.setFont("helvetica", "normal");
+            doc.text(`Muaji / Viti: ${monthYear}`, 14, 45);
+
+            let currentY = 55;
+
+            // Income Table
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(12);
+            doc.text("Të Ardhurat", 14, currentY);
+            currentY += 5;
+
+            // Ensure values are numbers for calculation
+            const incomeRows = incomes.map(i => [i.date, i.car, i.period, parseFloat(i.amount).toFixed(2)]);
+            const totalInc = incomes.reduce((sum, item) => sum + parseFloat(item.amount || 0), 0);
+
+            doc.autoTable({
+                startY: currentY,
+                head: [['Data', 'Makina', 'Periudha', 'Shuma (€)']],
+                body: incomeRows,
+                theme: 'grid',
+                headStyles: { fillColor: [220, 220, 220], textColor: 0, fontStyle: 'bold' },
+                styles: { fontSize: 9, cellPadding: 3 },
+                columnStyles: { 3: { halign: 'right' } }
+            });
+
+            currentY = doc.lastAutoTable ? (doc.lastAutoTable.finalY + 15) : (currentY + 20);
+
+            // Expense Table
+            doc.text("Shpenzimet", 14, currentY);
+            currentY += 5;
+
+            const expenseRows = expenses.map(e => [e.date, e.category, e.desc, e.car, parseFloat(e.amount).toFixed(2)]);
+            const totalExp = expenses.reduce((sum, item) => sum + parseFloat(item.amount || 0), 0);
+
+            doc.autoTable({
+                startY: currentY,
+                head: [['Data', 'Kategoria', 'Përshkrimi', 'Makina', 'Shuma (€)']],
+                body: expenseRows,
+                theme: 'grid',
+                headStyles: { fillColor: [220, 220, 220], textColor: 0, fontStyle: 'bold' },
+                styles: { fontSize: 9, cellPadding: 3 },
+                columnStyles: { 4: { halign: 'right' } }
+            });
+
+            currentY = doc.lastAutoTable ? (doc.lastAutoTable.finalY + 15) : (currentY + 20);
+
+            // Summary Table
+            doc.text("Përmbledhje Financiare", 14, currentY);
+            currentY += 5;
+            const netProfit = totalInc - totalExp;
+            const pageWidth = doc.internal.pageSize.width || 210;
+            const col0Width = 100;
+            const col1Width = 40;
+            const tableWidth = col0Width + col1Width;
+            const rightMargin = 14;
+            const leftMargin = pageWidth - tableWidth - rightMargin;
+
+            doc.autoTable({
+                startY: currentY,
+                body: [
+                    ['Totali i të Ardhurave (€)', totalInc.toFixed(2)],
+                    ['Totali i Shpenzimeve (€)', totalExp.toFixed(2)],
+                    ['Fitimi Neto (€)', netProfit.toFixed(2)]
+                ],
+                theme: 'grid',
+                styles: { halign: 'right', fontSize: 10, cellPadding: 2 },
+                columnStyles: { 0: { fontStyle: 'bold', cellWidth: col0Width }, 1: { cellWidth: col1Width } },
+                margin: { left: leftMargin, right: rightMargin },
+                didParseCell: function (data) {
+                    if (data.row.index === 2) {
+                        data.cell.styles.fontStyle = 'bold';
+                        data.cell.styles.textColor = [0, 0, 0];
+                    }
+                }
+            });
+
+            currentY = doc.lastAutoTable.finalY + 30;
+            doc.setLineWidth(0.5);
+            doc.line(14, currentY, 80, currentY);
+            doc.setFontSize(10);
+            doc.text("Nënshkrimi i Përgjegjësit", 14, currentY + 5);
+            doc.save(`Raport_${monthYear.replace(/\s/g, '_')}.pdf`);
+        };
+    </script>
+</body>
+
+</html>
